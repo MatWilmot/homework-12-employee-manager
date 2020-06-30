@@ -11,11 +11,10 @@ const connection = mysql.createConnection({
 
 connection.connect(async (err) => {
   if (err) throw err;
-  console.log("connected");
-  // mainMenu();
-  // getAllEmployees().then((res) => console.table(res));
+  mainMenu();
   // getAllRoles().then((res) => console.table(res));
-  getAllDepts().then((res) => console.table(res));
+  // getAllDepts().then((res) => console.table(res));
+  // getAllEmployees().then((res) => console.log(res[0].Full_Name));
 });
 
 const getAllRoles = () => {
@@ -61,7 +60,19 @@ getAllDepts().then((res) => {
 const getAllEmployees = () => {
   return new Promise((resolve, reject) => {
     connection.query(
-      "SELECT id, first_name, last_name, role_id, manager_id  FROM employee",
+      `SELECT
+      e.id "Employee_ID",
+      CONCAT_WS(" ", e.first_name, e.last_name) "Full_Name",
+      roles.title "Position",
+      department.name "Department",
+      roles.salary "Salary",
+      CONCAT_WS(" ", m.first_name, m.last_name) "Manager"
+  FROM
+      employee e
+  LEFT JOIN employee m ON m.id = e.manager_id
+  LEFT JOIN roles ON e.role_id = roles.id
+  LEFT JOIN department ON roles.department_id = department.id
+  ORDER BY e.id`,
       (err, data) => {
         if (err) {
           reject(err);
@@ -77,7 +88,7 @@ const employeeArray = [];
 
 getAllEmployees().then((res) => {
   res.forEach((element) => {
-    employeeArray.push(element.first_name);
+    employeeArray.push(element.Full_Name);
   });
 });
 
@@ -105,6 +116,7 @@ const mainMenu = () => {
           break;
 
         case "Read Info":
+          readInfo();
           // prompt one employee, all in one role, all in one dept, all employees
           break;
 
@@ -299,5 +311,70 @@ const newDepartment = () => {
         }
       );
       mainMenu();
+    });
+};
+
+const readInfo = () => {
+  inquirer
+    .prompt({
+      name: "readWhat",
+      message: "What information would you like to see?",
+      type: "list",
+      choices: [
+        "View all employees",
+        "View one employee",
+        "View all by role",
+        "View all by department",
+        "Go Back",
+      ],
+    })
+    .then((res) => {
+      switch (res.readWhat) {
+        case "View all employees":
+          getAllEmployees().then((res) => {
+            console.table(res);
+            mainMenu();
+          });
+
+          break;
+
+        case "View all by role":
+          // code goes here
+          break;
+
+        case "View one employee":
+          viewOneEmployee();
+          break;
+
+        case "View all by department":
+          //code goes here
+          break;
+
+        case "Go Back":
+          mainMenu();
+
+        default:
+          break;
+      }
+    });
+};
+
+const viewOneEmployee = () => {
+  inquirer
+    .prompt({
+      name: "employee",
+      message: "Which employee?",
+      type: "list",
+      choices: [...employeeArray, "Go Back"],
+    })
+    .then((res) => {
+      getAllEmployees().then((employees) => {
+        employees.forEach((element) => {
+          if (res.employee === element.Full_Name) {
+            console.table(element);
+          }
+        });
+        mainMenu();
+      });
     });
 };

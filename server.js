@@ -14,7 +14,8 @@ connection.connect(async (err) => {
   console.log("connected");
   // mainMenu();
   // getAllEmployees().then((res) => console.table(res));
-  getAllRoles().then((res) => console.table(res));
+  // getAllRoles().then((res) => console.table(res));
+  getAllDepts().then((res) => console.table(res));
 });
 
 const getAllRoles = () => {
@@ -145,7 +146,7 @@ const createNew = () => {
           break;
 
         case "Department":
-          // new dept function
+          newDepartment();
           break;
 
         case "Go Back":
@@ -277,5 +278,26 @@ const newRole = () => {
           console.table(role);
           mainMenu();
         });
+    });
+};
+
+const newDepartment = () => {
+  inquirer
+    .prompt({
+      name: "deptName",
+      message: "Department name: ",
+      type: "input",
+    })
+    .then((answer) => {
+      connection.query(
+        "INSERT INTO department SET ?",
+        [{ name: answer.deptName }],
+        (err) => {
+          if (err) {
+            throw err;
+          }
+        }
+      );
+      mainMenu();
     });
 };

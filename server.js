@@ -13,9 +13,8 @@ connection.connect(async (err) => {
   if (err) throw err;
   console.log("connected");
   // mainMenu();
-  getAllEmployees().then((res) => {
-    console.table(res);
-  });
+  // getAllEmployees().then((res) => console.table(res));
+  getAllRoles().then((res) => console.table(res));
 });
 
 const getAllRoles = () => {
@@ -236,7 +235,7 @@ const newRole = () => {
   inquirer
     .prompt([
       {
-        name: "newRole",
+        name: "title",
         message: "New Role Title: ",
         type: "input",
       },
@@ -253,24 +252,30 @@ const newRole = () => {
       },
     ])
     .then((answers) => {
+      const title = answers.title;
+      const salary = parseInt(answers.salary);
       let deptID;
-      // getAllDepts().then for each dept compare element.name to answers.dept, if it matches let deptID = element.id
-      mainMenu();
+      getAllDepts()
+        .then((depts) => {
+          depts.forEach((element) => {
+            if (element.name === answers.dept) {
+              deptID = element.id;
+            }
+          });
+        })
+        .then(() => {
+          const role = {
+            title: title,
+            salary: salary,
+            department_id: deptID,
+          };
+          connection.query("INSERT INTO roles SET ?", [role], (err) => {
+            if (err) {
+              throw err;
+            }
+          });
+          console.table(role);
+          mainMenu();
+        });
     });
-};
-
-const addRole = (title, salary, departmentID) => {
-  return new Promise((resolve, reject) => {
-    connection.query(
-      "INSERT INTO roles SET ?",
-      [{ title: title, salary: salary, department_id: departmentID }],
-      (err) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve({ msg: "Success" });
-        }
-      }
-    );
-  });
 };

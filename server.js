@@ -322,9 +322,11 @@ const readInfo = () => {
       type: "list",
       choices: [
         "View all employees",
+        "View all roles",
+        "View all departments",
         "View one employee",
-        "View all by role",
-        "View all by department",
+        "View all employees by role",
+        "View all employees by department",
         "Go Back",
       ],
     })
@@ -338,16 +340,32 @@ const readInfo = () => {
 
           break;
 
-        case "View all by role":
-          // code goes here
+        case "View all roles":
+          getAllRoles().then((res) => {
+            console.table(res);
+            mainMenu();
+          });
+
+          break;
+
+        case "View all departments":
+          getAllDepts().then((res) => {
+            console.table(res);
+            mainMenu();
+          });
+
           break;
 
         case "View one employee":
           viewOneEmployee();
           break;
 
-        case "View all by department":
-          //code goes here
+        case "View all employees by role":
+          viewAllByRoleQuestion();
+          break;
+
+        case "View all employees by department":
+          viewAllByDeptQuestion();
           break;
 
         case "Go Back":
@@ -377,4 +395,94 @@ const viewOneEmployee = () => {
         mainMenu();
       });
     });
+};
+
+const viewAllByRoleQuestion = () => {
+  inquirer
+    .prompt({
+      name: "role",
+      message: "Select role:",
+      type: "list",
+      choices: [...roleArray, "Go Back"],
+    })
+    .then((res) => {
+      viewAllByRole(res.role).then((response) => {
+        console.table(response);
+        mainMenu();
+      });
+    });
+};
+
+const viewAllByRole = (role) => {
+  return new Promise((resolve, reject) => {
+    connection.query(
+      `SELECT
+      e.id "Employee_ID",
+      CONCAT_WS(" ", e.first_name, e.last_name) "Full_Name",
+      roles.title "Position",
+      department.name "Department",
+      roles.salary "Salary",
+      CONCAT_WS(" ", m.first_name, m.last_name) "Manager"
+  FROM
+      employee e
+  LEFT JOIN employee m ON m.id = e.manager_id
+  LEFT JOIN roles ON e.role_id = roles.id
+  LEFT JOIN department ON roles.department_id = department.id
+  WHERE ?
+  ORDER BY e.id;`,
+      [{ title: role }],
+      (err, data) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(data);
+        }
+      }
+    );
+  });
+};
+
+const viewAllByDeptQuestion = () => {
+  inquirer
+    .prompt({
+      name: "dept",
+      message: "Select department:",
+      type: "list",
+      choices: [...departmentArray, "Go Back"],
+    })
+    .then((res) => {
+      viewAllByDept(res.dept).then((response) => {
+        console.table(response);
+        mainMenu();
+      });
+    });
+};
+
+const viewAllByDept = (dept) => {
+  return new Promise((resolve, reject) => {
+    connection.query(
+      `SELECT
+      e.id "Employee_ID",
+      CONCAT_WS(" ", e.first_name, e.last_name) "Full_Name",
+      roles.title "Position",
+      department.name "Department",
+      roles.salary "Salary",
+      CONCAT_WS(" ", m.first_name, m.last_name) "Manager"
+  FROM
+      employee e
+  LEFT JOIN employee m ON m.id = e.manager_id
+  LEFT JOIN roles ON e.role_id = roles.id
+  LEFT JOIN department ON roles.department_id = department.id
+  WHERE ?
+  ORDER BY e.id;`,
+      [{ name: dept }],
+      (err, data) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(data);
+        }
+      }
+    );
+  });
 };

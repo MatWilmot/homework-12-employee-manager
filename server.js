@@ -117,7 +117,7 @@ const mainMenu = () => {
 
         case "Read Info":
           readInfo();
-          // prompt one employee, all in one role, all in one dept, all employees
+
           break;
 
         case "Update Info":
@@ -125,6 +125,7 @@ const mainMenu = () => {
           break;
 
         case "Delete Info":
+          deleteInfo();
           // prompt delete employee, delete department, delete role
           break;
 
@@ -484,5 +485,52 @@ const viewAllByDept = (dept) => {
         }
       }
     );
+  });
+};
+
+const deleteInfo = () => {
+  inquirer
+    .prompt({
+      name: "deleteWhat",
+      message: "What would you like to delete?",
+      type: "list",
+      choices: ["An Employee", "Go Back"],
+    })
+    .then((answer) => {
+      if (answer.deleteWhat === "An Employee") {
+        chooseEmployee();
+      } else {
+        mainMenu();
+      }
+    });
+};
+
+const chooseEmployee = () => {
+  inquirer
+    .prompt({
+      name: "toDelete",
+      message: "Which employee should be deleted?",
+      type: "list",
+      choices: [...employeeArray, "Go Back"],
+    })
+    .then((answer) => {
+      if (answer.toDelete === "Go Back") {
+        mainMenu();
+      } else {
+        employeet(answer.toDelete);
+        mainMenu();
+      }
+    });
+};
+
+const employeet = (name) => {
+  let ID;
+  getAllEmployees().then((res) => {
+    res.forEach((element) => {
+      if (name === element.Full_Name) {
+        ID = element.Employee_ID;
+      }
+    });
+    connection.query("DELETE FROM employee WHERE ?", [{ id: ID }]);
   });
 };

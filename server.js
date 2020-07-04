@@ -12,6 +12,8 @@ const connection = mysql.createConnection({
 connection.connect(async (err) => {
   if (err) throw err;
   updateEmployeeArray();
+  updateDepartmentArray();
+  updateRoleArray();
   mainMenu();
   // getAllRoles().then((res) => console.table(res));
   // getAllDepts().then((res) => console.table(res));
@@ -20,23 +22,29 @@ connection.connect(async (err) => {
 
 const getAllRoles = () => {
   return new Promise((resolve, reject) => {
-    connection.query("SELECT id, title, salary FROM roles", (err, data) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(data);
+    connection.query(
+      "SELECT id, title, salary, department_id FROM roles",
+      (err, data) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(data);
+        }
       }
-    });
+    );
   });
 };
 
-const roleArray = [];
+let roleArray = [];
 
-getAllRoles().then((res) => {
-  res.forEach((element) => {
-    roleArray.push(element.title);
+const updateRoleArray = () => {
+  roleArray = [];
+  getAllRoles().then((res) => {
+    res.forEach((element) => {
+      roleArray.push(element.title);
+    });
   });
-});
+};
 
 const getAllDepts = () => {
   return new Promise((resolve, reject) => {
@@ -50,13 +58,16 @@ const getAllDepts = () => {
   });
 };
 
-const departmentArray = [];
+let departmentArray = [];
 
-getAllDepts().then((res) => {
-  res.forEach((element) => {
-    departmentArray.push(element.name);
+const updateDepartmentArray = () => {
+  departmentArray = [];
+  getAllDepts().then((res) => {
+    res.forEach((element) => {
+      departmentArray.push(element.name);
+    });
   });
-});
+};
 
 const getAllEmployees = () => {
   return new Promise((resolve, reject) => {
@@ -116,9 +127,10 @@ const getFullEmployeeInfo = () => {
   });
 };
 
-const employeeArray = [];
+let employeeArray = [];
 
 const updateEmployeeArray = () => {
+  employeeArray = [];
   getAllEmployees().then((res) => {
     res.forEach((element) => {
       employeeArray.push(element.Full_Name);
@@ -324,6 +336,7 @@ const newRole = () => {
             }
           });
           console.table(role);
+          updateRoleArray();
           mainMenu();
         });
     });
@@ -346,6 +359,7 @@ const newDepartment = () => {
           }
         }
       );
+      updateDepartmentArray();
       mainMenu();
     });
 };
@@ -590,12 +604,12 @@ const updateInfo = () => {
           break;
 
         case "Role Info":
-          // code here
+          pickRole();
 
           break;
 
         case "Department Name":
-          // code here
+          pickDept();
 
           break;
 
@@ -675,6 +689,7 @@ const pickEmployee = () => {
                   });
                   console.log(obj, employeeID, roleID, managerID);
                   updateEmployee(obj, employeeID, roleID, managerID);
+                  updateEmployeeArray();
                   mainMenu();
                 });
               });
@@ -701,4 +716,97 @@ const updateEmployee = (obj, employeeID, roleID, managerID) => {
       }
     }
   );
+};
+
+const pickRole = () => {
+  inquirer
+    .prompt({
+      name: "pickRole",
+      message: "Which role should be updated?",
+      type: "list",
+      choices: roleArray,
+    })
+    .then((answer) => {
+      updateRole(answer.pickRole);
+    });
+};
+
+const updateRole = (role) => {
+  let roleID;
+  let salary;
+  let department_id;
+
+  getAllRoles()
+    .then((roles) => {
+      roles.forEach((element) => {
+        if (element.title === role) {
+          roleID = element.id;
+          salary = element.salary;
+        }
+      });
+      console.log(salary);
+    })
+    .then(() => {
+      inquirer
+        .prompt([
+          {
+            name: "title",
+            message: "Role title:",
+            type: "input",
+            default: role,
+          },
+          {
+            name: "salary",
+            message: "What is the salary for this position?",
+            type: "input",
+            default: salary,
+          },
+          {
+            name: "department",
+            message: "Which department does this position belong to?",
+            type: "list",
+            choices: departmentArray,
+          },
+        ])
+        .then((answer) => {
+          getAllDepts().then((depts) => {
+            depts.forEach((element) => {
+              if (element.name === answer.department) {
+                department_id = element.id;
+              }
+            });
+            connection.query(
+              "UPDATE roles SET ? WHERE ?",
+              [
+                {
+                  title: answer.title,
+                  salary: answer.salary,
+                  department_id: department_id,
+                },
+                { id: roleID },
+              ],
+              (err) => {
+                if (err) {
+                  throw err;
+                }
+              }
+            );
+            updateRoleArray();
+            mainMenu();
+          });
+        });
+    });
+};
+
+const pickDept = () => {
+  inquirer
+    .prompt({
+      name: "pickDept",
+      message: "Which department should be updated?",
+      type: "list",
+      choices: departmentArray,
+    })
+    .then((answer) => {
+      updateDept(answer);
+    });
 };

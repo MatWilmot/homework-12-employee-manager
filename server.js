@@ -11,10 +11,11 @@ const connection = mysql.createConnection({
 
 connection.connect(async (err) => {
   if (err) throw err;
+  updateEmployeeArray();
   mainMenu();
   // getAllRoles().then((res) => console.table(res));
   // getAllDepts().then((res) => console.table(res));
-  // getAllEmployees().then((res) => console.log(res[0].Full_Name));
+  // getAllEmployees().then((res) => console.table(res));
 });
 
 const getAllRoles = () => {
@@ -61,12 +62,12 @@ const getAllEmployees = () => {
   return new Promise((resolve, reject) => {
     connection.query(
       `SELECT
-      e.id "Employee_ID",
-      CONCAT_WS(" ", e.first_name, e.last_name) "Full_Name",
-      roles.title "Position",
-      department.name "Department",
-      roles.salary "Salary",
-      CONCAT_WS(" ", m.first_name, m.last_name) "Manager"
+      e.id id,
+      CONCAT_WS(" ", e.first_name, e.last_name) Full_Name,
+      roles.title,
+      department.name,
+      roles.salary,
+      CONCAT_WS(" ", m.first_name, m.last_name) manager
   FROM
       employee e
   LEFT JOIN employee m ON m.id = e.manager_id
@@ -84,13 +85,46 @@ const getAllEmployees = () => {
   });
 };
 
+const getFullEmployeeInfo = () => {
+  return new Promise((resolve, reject) => {
+    connection.query(
+      `SELECT
+      e.id id,
+      e.first_name,
+      e.last_name,
+      CONCAT_WS(" ", e.first_name, e.last_name) Full_Name,
+      e.role_id,
+      roles.title,
+      department.name,
+      roles.salary,
+      CONCAT_WS(" ", m.first_name, m.last_name) manager,
+      e.manager_id
+  FROM
+      employee e
+  LEFT JOIN employee m ON m.id = e.manager_id
+  LEFT JOIN roles ON e.role_id = roles.id
+  LEFT JOIN department ON roles.department_id = department.id
+  ORDER BY e.id;`,
+      (err, data) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(data);
+        }
+      }
+    );
+  });
+};
+
 const employeeArray = [];
 
-getAllEmployees().then((res) => {
-  res.forEach((element) => {
-    employeeArray.push(element.Full_Name);
+const updateEmployeeArray = () => {
+  getAllEmployees().then((res) => {
+    res.forEach((element) => {
+      employeeArray.push(element.Full_Name);
+    });
   });
-});
+};
 
 const mainMenu = () => {
   inquirer
@@ -121,7 +155,7 @@ const mainMenu = () => {
           break;
 
         case "Update Info":
-          // prompt update employee info, department info, role info
+          updateInfo();
           break;
 
         case "Delete Info":
@@ -214,7 +248,7 @@ const newEmployee = () => {
           getAllEmployees()
             .then((resp) => {
               resp.forEach((element) => {
-                if (element.first_name === res.manager) {
+                if (element.Full_Name === res.manager) {
                   managerID = element.id;
                 } else if (res.manager === "None") {
                   managerID = null;
@@ -236,6 +270,7 @@ const newEmployee = () => {
                 }
               );
               console.table(employee);
+              updateEmployeeArray();
               mainMenu();
             });
         });
@@ -387,14 +422,18 @@ const viewOneEmployee = () => {
       choices: [...employeeArray, "Go Back"],
     })
     .then((res) => {
-      getAllEmployees().then((employees) => {
-        employees.forEach((element) => {
-          if (res.employee === element.Full_Name) {
-            console.table(element);
-          }
+      if (res.employee === "Go Back") {
+        readInfo();
+      } else {
+        getAllEmployees().then((employees) => {
+          employees.forEach((element) => {
+            if (res.employee === element.Full_Name) {
+              console.table(element);
+            }
+          });
+          mainMenu();
         });
-        mainMenu();
-      });
+      }
     });
 };
 
@@ -533,4 +572,133 @@ const employeet = (name) => {
     });
     connection.query("DELETE FROM employee WHERE ?", [{ id: ID }]);
   });
+};
+
+const updateInfo = () => {
+  inquirer
+    .prompt({
+      name: "updateWhat",
+      message: "What would you like to update?",
+      type: "list",
+      choices: ["An Employee", "Role Info", "Department Name"],
+    })
+    .then((res) => {
+      switch (res.updateWhat) {
+        case "An Employee":
+          pickEmployee();
+
+          break;
+
+        case "Role Info":
+          // code here
+
+          break;
+
+        case "Department Name":
+          // code here
+
+          break;
+
+        default:
+          break;
+      }
+    });
+};
+
+const pickEmployee = () => {
+  inquirer
+    .prompt({
+      name: "toUpdate",
+      message: "Which employee would you like to update?",
+      type: "list",
+      choices: [...employeeArray, "Go Back"],
+    })
+    .then((answer) => {
+      let defFName;
+      let defLName;
+      let employeeID;
+      let roleID;
+      let managerID;
+
+      if (answer.toUpdate === "Go Back") {
+        mainMenu();
+      } else {
+        getFullEmployeeInfo()
+          .then((res) => {
+            res.forEach((element) => {
+              if (answer.toUpdate === element.Full_Name) {
+                defFName = element.first_name;
+                defLName = element.last_name;
+                employeeID = element.id;
+              }
+            });
+          })
+          .then(() => {
+            inquirer
+              .prompt([
+                {
+                  name: "updateFirstName",
+                  message: "First name:",
+                  type: "input",
+                  default: defFName,
+                },
+                {
+                  name: "updateLastName",
+                  message: "Last name:",
+                  type: "input",
+                  default: defLName,
+                },
+                {
+                  name: "updateTitle",
+                  message: "Select employee's role:",
+                  type: "list",
+                  choices: roleArray,
+                },
+                {
+                  name: "updateManager",
+                  message: "Select employee's manager:",
+                  type: "list",
+                  choices: [...employeeArray, "None"],
+                },
+              ])
+              .then((obj) => {
+                getFullEmployeeInfo().then((res) => {
+                  res.forEach((element) => {
+                    if (obj.updateTitle === element.title) {
+                      roleID = element.role_id;
+                    }
+                    if (obj.updateManager === "None") {
+                      managerID = null;
+                    } else if (obj.updateManager === element.Full_Name) {
+                      managerID = element.id;
+                    }
+                  });
+                  console.log(obj, employeeID, roleID, managerID);
+                  updateEmployee(obj, employeeID, roleID, managerID);
+                  mainMenu();
+                });
+              });
+          });
+      }
+    });
+};
+
+const updateEmployee = (obj, employeeID, roleID, managerID) => {
+  connection.query(
+    `UPDATE employee SET ? WHERE ?`,
+    [
+      {
+        first_name: obj.updateFirstName,
+        last_name: obj.updateLastName,
+        role_id: roleID,
+        manager_id: managerID,
+      },
+      { id: employeeID },
+    ],
+    (err) => {
+      if (err) {
+        throw err;
+      }
+    }
+  );
 };

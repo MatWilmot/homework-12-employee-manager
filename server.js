@@ -807,6 +807,37 @@ const pickDept = () => {
       choices: departmentArray,
     })
     .then((answer) => {
-      updateDept(answer);
+      updateDept(answer.pickDept);
+    });
+};
+
+const updateDept = (dept) => {
+  let deptID;
+  inquirer
+    .prompt({
+      name: "deptName",
+      message: "What should the department be renamed to?",
+      type: "input",
+      default: dept,
+    })
+    .then((res) => {
+      getAllDepts().then((depts) => {
+        depts.forEach((element) => {
+          if (element.name === res.deptName) {
+            deptID = element.id;
+          }
+        });
+        connection.query(
+          "UPDATE department SET ? WHERE ?",
+          [{ name: res.deptName }, { id: deptID }],
+          (err) => {
+            if (err) {
+              throw err;
+            }
+          }
+        );
+        updateDepartmentArray();
+        mainMenu();
+      });
     });
 };
